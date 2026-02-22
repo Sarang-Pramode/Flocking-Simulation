@@ -15,6 +15,9 @@ const neighborsBuffer: Boid[] = new Array(64);
 const outDx = { v: 0 };
 const outDy = { v: 0 };
 const outDz = { v: 0 };
+const outCollX = { v: 0 };
+const outCollY = { v: 0 };
+const outCollZ = { v: 0 };
 
 export function tick(
   boids: Boid[],
@@ -39,12 +42,18 @@ export function tick(
       boid, neighborsBuffer, count, settings,
       mouse.x, mouse.y, mouse.z, mouse.force,
       outDx, outDy, outDz,
+      outCollX, outCollY, outCollZ,
     );
     boid.dx = outDx.v;
     boid.dy = outDy.v;
     boid.dz = outDz.v;
 
     integrate(boid, outDx.v, outDy.v, outDz.v, settings, dt);
+
+    boid.vx += outCollX.v;
+    boid.vy += outCollY.v;
+    boid.vz += outCollZ.v;
+
     applyBounds(boid, width, height, depth, settings.bounceEdges);
   }
 }

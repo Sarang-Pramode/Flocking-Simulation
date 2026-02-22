@@ -15,42 +15,65 @@ export function computeSteering(
   outDx: { v: number },
   outDy: { v: number },
   outDz: { v: number },
+  outCollX: { v: number },
+  outCollY: { v: number },
+  outCollZ: { v: number },
 ): void {
   let sx = 0, sy = 0, sz = 0;
   let ax = 0, ay = 0, az = 0;
   let cx = 0, cy = 0, cz = 0;
+  let collX = 0, collY = 0, collZ = 0;
 
-  if (!settings.particleMode && neighborCount > 0) {
+  const collDiam = settings.collisionRadius * 2;
+  const collDiam2 = collDiam * collDiam;
+  const hasCollision = settings.collisionForce > 0 && collDiam > EPS;
+
+  if (neighborCount > 0) {
     for (let i = 0; i < neighborCount; i++) {
       const n = neighbors[i];
       const ddx = boid.x - n.x;
       const ddy = boid.y - n.y;
       const ddz = boid.z - n.z;
       const dist2 = ddx * ddx + ddy * ddy + ddz * ddz + EPS;
-      sx += ddx / dist2;
-      sy += ddy / dist2;
-      sz += ddz / dist2;
 
-      const nSpeed = Math.sqrt(n.vx * n.vx + n.vy * n.vy + n.vz * n.vz) + EPS;
-      ax += n.vx / nSpeed;
-      ay += n.vy / nSpeed;
-      az += n.vz / nSpeed;
+      if (!settings.particleMode) {
+        sx += ddx / dist2;
+        sy += ddy / dist2;
+        sz += ddz / dist2;
 
-      cx += n.x;
-      cy += n.y;
-      cz += n.z;
+        const nSpeed = Math.sqrt(n.vx * n.vx + n.vy * n.vy + n.vz * n.vz) + EPS;
+        ax += n.vx / nSpeed;
+        ay += n.vy / nSpeed;
+        az += n.vz / nSpeed;
+
+        cx += n.x;
+        cy += n.y;
+        cz += n.z;
+      }
+
+      if (hasCollision && dist2 < collDiam2) {
+        const dist = Math.sqrt(dist2);
+        const overlap = 1 - dist / collDiam;
+        const repulse = settings.collisionForce * overlap * overlap;
+        const invDist = 1 / dist;
+        collX += ddx * invDist * repulse;
+        collY += ddy * invDist * repulse;
+        collZ += ddz * invDist * repulse;
+      }
     }
 
-    const invN = 1 / neighborCount;
-    const bSpeed = Math.sqrt(boid.vx * boid.vx + boid.vy * boid.vy + boid.vz * boid.vz) + EPS;
+    if (!settings.particleMode) {
+      const invN = 1 / neighborCount;
+      const bSpeed = Math.sqrt(boid.vx * boid.vx + boid.vy * boid.vy + boid.vz * boid.vz) + EPS;
 
-    ax = ax * invN - boid.vx / bSpeed;
-    ay = ay * invN - boid.vy / bSpeed;
-    az = az * invN - boid.vz / bSpeed;
+      ax = ax * invN - boid.vx / bSpeed;
+      ay = ay * invN - boid.vy / bSpeed;
+      az = az * invN - boid.vz / bSpeed;
 
-    cx = cx * invN - boid.x;
-    cy = cy * invN - boid.y;
-    cz = cz * invN - boid.z;
+      cx = cx * invN - boid.x;
+      cy = cy * invN - boid.y;
+      cz = cz * invN - boid.z;
+    }
   }
 
   let ux = 0, uy = 0, uz = 0;
@@ -110,11 +133,15 @@ export function computeSteering(
 
   if (!settings.mode3D) {
     uz = 0;
+    collZ = 0;
   }
 
   outDx.v = ux;
   outDy.v = uy;
   outDz.v = uz;
+  outCollX.v = collX;
+  outCollY.v = collY;
+  outCollZ.v = collZ;
 }
 
 export function integrate(boid: Boid, ux: number, uy: number, uz: number, settings: Settings, dt: number): void {

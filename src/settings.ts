@@ -18,6 +18,10 @@ export interface Settings {
   particleMode: boolean;
   worldDepth: number;
 
+  // Collision
+  collisionRadius: number;
+  collisionForce: number;
+
   boidSize: number;
 
   // Colors
@@ -51,6 +55,8 @@ export function createDefaultSettings(): Settings {
     bounceEdges: true,
     particleMode: false,
     worldDepth: 800,
+    collisionRadius: 12,
+    collisionForce: 3.0,
     boidSize: 1.0,
 
     backgroundColor: '#0a0a1a',

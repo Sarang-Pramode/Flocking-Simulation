@@ -88,7 +88,7 @@ function applyPanelSizing(gui: GUI): void {
   gui.domElement.style.maxHeight = `${vh}px`;
   gui.domElement.style.overflowY = 'auto';
 
-  const totalRows = 40;
+  const totalRows = 42;
   const rowH = Math.max(18, Math.floor(vh / totalRows));
   const pad = Math.max(2, Math.floor(rowH * 0.12));
   const fontSize = Math.max(11, Math.min(18, Math.floor(vh / 52)));
@@ -146,6 +146,8 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   sim.add(settings, 'bounceEdges').name('Bounce Edges');
   sim.add(settings, 'particleMode').name('Particle Mode');
   const worldDepthCtrl = sim.add(settings, 'worldDepth', 200, 2000, 10).name('World Depth').onFinishChange(callbacks.onRestart);
+  sim.add(settings, 'collisionRadius', 0, 50, 0.5).name('Collision Radius');
+  sim.add(settings, 'collisionForce', 0, 10, 0.1).name('Collision Force');
   sim.add(settings, 'boidSize', 0.2, 5, 0.1).name('Boid Size');
 
   // --- Visual ---

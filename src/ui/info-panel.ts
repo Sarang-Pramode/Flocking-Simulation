@@ -58,6 +58,14 @@ export function createInfoPanel(): HTMLElement {
     <dt>Particle Mode</dt>
     <dd>Disables all flocking forces (S/A/C = 0). Only noise, drag, and mouse interaction remain. Useful for testing input forces.</dd>
 
+    <dt>Collision Radius</dt>
+    <dd>Effective "body" radius of each boid. When two boids are closer than 2&times; this value, a hard repulsive
+    force pushes them apart. Models the physical volume of real organisms — prevents boids from overlapping.</dd>
+
+    <dt>Collision Force</dt>
+    <dd>Strength of the hard-body repulsion impulse. This force <strong>bypasses the steering clamp</strong> and is applied
+    directly as a velocity impulse, so it always wins over soft flocking forces at close range.</dd>
+
     <dt>Boid Size</dt>
     <dd>Visual scale of each cone. Does not affect simulation physics.</dd>
 
@@ -91,6 +99,15 @@ export function createInfoPanel(): HTMLElement {
   v &larr; v &middot; (1 &minus; drag)<br/>
   v &larr; clampSpeed(v, min, max)<br/>
   p &larr; p + v &middot; &Delta;t</p>
+
+  <h4>Hard-Body Collision</h4>
+  <p>Applied <strong>after</strong> integration, bypassing the steering clamp. For each neighbor <em>j</em>
+  within 2 &times; collisionRadius:</p>
+  <p class="formula">dist = |p<sub>i</sub> &minus; p<sub>j</sub>|<br/>
+  overlap = 1 &minus; dist / (2 &middot; r<sub>coll</sub>)<br/>
+  impulse += F<sub>coll</sub> &middot; overlap&sup2; &middot; normalize(p<sub>i</sub> &minus; p<sub>j</sub>)</p>
+  <p>Quadratic scaling means near-zero overlap produces gentle nudges, while deep overlap produces
+  overwhelming repulsion — modeling rigid-body contact.</p>
 </details>
 
 <details>
