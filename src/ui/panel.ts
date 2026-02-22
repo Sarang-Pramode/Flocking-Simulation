@@ -1,6 +1,7 @@
 import GUI from 'lil-gui';
 import type { Settings } from '../settings.ts';
 import { resetSettings } from '../settings.ts';
+import { PRESETS, applyPreset } from './presets.ts';
 
 export interface PanelCallbacks {
   onRestart: () => void;
@@ -66,6 +67,14 @@ function injectScalingCSS(rowH: number, fontSize: number, pad: number): void {
       height: ${rowH}px;
       font-size: ${fontSize}px;
     }
+    .lil-gui .controller.color .display {
+      height: ${rowH}px;
+      border-radius: 3px;
+    }
+    .lil-gui .controller.color input[type="color"] {
+      height: ${rowH}px;
+      width: ${rowH * 2}px;
+    }
   `;
 }
 
@@ -79,7 +88,7 @@ function applyPanelSizing(gui: GUI): void {
   gui.domElement.style.maxHeight = `${vh}px`;
   gui.domElement.style.overflowY = 'auto';
 
-  const totalRows = 38;
+  const totalRows = 40;
   const rowH = Math.max(18, Math.floor(vh / totalRows));
   const pad = Math.max(2, Math.floor(rowH * 0.12));
   const fontSize = Math.max(11, Math.min(18, Math.floor(vh / 52)));
@@ -96,12 +105,32 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   applyPanelSizing(gui);
   window.addEventListener('resize', () => applyPanelSizing(gui));
 
+  function refreshAll(): void {
+    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    worldDepthCtrl.domElement.parentElement!.style.display = settings.mode3D ? '' : 'none';
+    callbacks.onModeSwitch();
+  }
+
+  // --- Presets ---
+  const presetNames = PRESETS.map(p => p.name);
+  const presetState = { current: '— Select —' };
+
+  const presetsFolder = gui.addFolder('Presets');
+  presetsFolder.add(presetState, 'current', ['— Select —', ...presetNames]).name('Preset').onChange((name: string) => {
+    const preset = PRESETS.find(p => p.name === name);
+    if (!preset) return;
+    applyPreset(preset, settings);
+    refreshAll();
+  });
+
+  // --- Mode ---
   const modeFolder = gui.addFolder('Mode');
   modeFolder.add(settings, 'mode3D').name('3D Simulation').onChange(() => {
     worldDepthCtrl.domElement.parentElement!.style.display = settings.mode3D ? '' : 'none';
     callbacks.onModeSwitch();
   });
 
+  // --- Simulation ---
   const sim = gui.addFolder('Simulation');
   sim.add(settings, 'boidCount', 100, 10000, 1).name('Boid Count').onFinishChange(callbacks.onRestart);
   sim.add(settings, 'visionRadius', 5, 200, 1).name('Vision Radius');
@@ -119,7 +148,10 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   const worldDepthCtrl = sim.add(settings, 'worldDepth', 200, 2000, 10).name('World Depth').onFinishChange(callbacks.onRestart);
   sim.add(settings, 'boidSize', 0.2, 5, 0.1).name('Boid Size');
 
+  // --- Visual ---
   const vis = gui.addFolder('Visual');
+  vis.addColor(settings, 'backgroundColor').name('Background');
+  vis.addColor(settings, 'boidColor').name('Boid Color');
   vis.add(settings, 'hideBoids').name('Hide Boids');
   vis.add(settings, 'showDesiredDirections').name('Direction Vectors');
   vis.add(settings, 'hueBySpeed').name('Hue by Speed');
@@ -128,17 +160,17 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   vis.add(settings, 'showDebugInfo').name('Debug Info (FPS)');
   vis.add(settings, 'showSpatialSubdivision').name('Bounding Box');
 
+  // --- Camera ---
   const cam = gui.addFolder('Camera');
   cam.add({ reset: callbacks.onResetCamera }, 'reset').name('Reset Camera');
 
+  // --- Actions ---
   const actions = gui.addFolder('Actions');
   actions.add({ restart: callbacks.onRestart }, 'restart').name('Restart Simulation');
   actions.add({
     reset: () => {
       resetSettings(settings);
-      gui.controllersRecursive().forEach(c => c.updateDisplay());
-      worldDepthCtrl.domElement.parentElement!.style.display = settings.mode3D ? '' : 'none';
-      callbacks.onModeSwitch();
+      refreshAll();
     },
   }, 'reset').name('Reset Settings');
   actions.add({ export: callbacks.onExport }, 'export').name('Export Settings');

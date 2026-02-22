@@ -20,6 +20,10 @@ export interface Settings {
 
   boidSize: number;
 
+  // Colors
+  backgroundColor: string;
+  boidColor: string;
+
   // Visual
   hideBoids: boolean;
   showDesiredDirections: boolean;
@@ -48,6 +52,9 @@ export function createDefaultSettings(): Settings {
     particleMode: false,
     worldDepth: 800,
     boidSize: 1.0,
+
+    backgroundColor: '#0a0a1a',
+    boidColor: '#88ccff',
 
     hideBoids: false,
     showDesiredDirections: false,

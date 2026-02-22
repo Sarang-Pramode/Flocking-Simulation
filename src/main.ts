@@ -7,6 +7,7 @@ import { initThreeApp, type ThreeApp } from './renderer/three-app.ts';
 import { BoidsView } from './renderer/boids-view.ts';
 import { Overlays } from './renderer/overlays.ts';
 import { createPanel } from './ui/panel.ts';
+import { createInfoPanel } from './ui/info-panel.ts';
 import type { Boid } from './simulation/boid.ts';
 
 const settings = createDefaultSettings();
@@ -95,6 +96,8 @@ function main() {
     onModeSwitch: onModeSwitch,
   });
 
+  createInfoPanel();
+
   restart();
   applyCamera();
 
@@ -179,6 +182,7 @@ function main() {
       tick(boids, grid, settings, dt, getWidth(), getHeight(), getDepth(), mouse);
     }
 
+    renderer.setClearColor(settings.backgroundColor);
     boidsView.update(boids, settings);
     overlays.update(boids, settings, getWidth(), getHeight(), getDepth(), deltaMs);
     renderer.render(scene, camera);

@@ -86,7 +86,7 @@ export class BoidsView {
         const t = Math.min(Math.max((speed - settings.minSpeed) / speedRange, 0), 1);
         hslToColor(240 - t * 240, 0.9, 0.55, _color);
       } else {
-        _color.setHex(0x88ccff);
+        _color.set(settings.boidColor);
       }
       this.mesh.setColorAt(i, _color);
     }
