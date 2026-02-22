@@ -1,0 +1,53 @@
+---
+description: Steering formulas and spatial query rules for boids simulation
+globs: src/simulation/**/*.ts, src/spatial/**/*.ts
+alwaysApply: false
+---
+
+# Boids Math Reference
+
+## Neighborhood
+
+```typescript
+// Collect neighbors within visionRadius, capped by movementAccuracy
+const neighbors = grid.query(boid.pos, settings.visionRadius);
+// Sort by distance, take closest K where K = movementAccuracy
+```
+
+## Steering vectors (epsilon = 0.0001)
+
+```typescript
+// Separation: repel from nearby boids, inverse-square weighted
+S = Σ (p_i - p_j) / (|p_i - p_j|² + ε)
+
+// Alignment: steer toward average neighbor heading
+A = normalize(mean(v_j / (|v_j| + ε))) - normalize(v_i)
+
+// Cohesion: steer toward neighbor centroid
+C = mean(p_j) - p_i
+```
+
+## Combine + clamp
+
+```typescript
+u = w_sep * normalize(S) + w_align * normalize(A) + w_coh * normalize(C) + w_noise * randomUnitVec()
+u = clampMagnitude(u, steeringForce)
+```
+
+## Integration
+
+```typescript
+vel += u
+vel *= (1 - drag)
+vel = clampSpeed(vel, minSpeed, maxSpeed)
+pos += vel * dt
+```
+
+## Particle mode
+
+Set `w_sep = w_align = w_coh = 0`. Only noise, drag, and user forces apply.
+
+## Boundary
+
+- **Bounce**: reflect velocity component when pos exits bounds
+- **Wrap**: teleport to opposite edge when pos exits bounds

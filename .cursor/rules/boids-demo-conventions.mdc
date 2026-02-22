@@ -1,0 +1,43 @@
+---
+description: Architecture and coding conventions for the boids flocking simulation
+globs: src/**/*.ts
+alwaysApply: false
+---
+
+# Boids Demo Conventions
+
+## 4-module architecture
+
+- `src/simulation/` -- Boid state, steering, integration, boundaries
+- `src/spatial/` -- Uniform grid for neighbor queries
+- `src/renderer/` -- PixiJS canvas, triangle boids, overlays
+- `src/ui/` -- lil-gui panel bound to settings
+
+## Single settings object
+
+All parameters live in `src/settings.ts`. UI reads/writes this object directly.
+Settings must be JSON-serializable (no functions, no class instances).
+
+## Performance rules
+
+- Neighbor search uses spatial grid, never O(N^2) brute force
+- Grid cell size = visionRadius; query boid's cell + 8 surrounding cells
+- Cap neighbors per boid at `movementAccuracy`
+- No per-frame heap allocations in the simulation loop; reuse buffers
+- PixiJS uses batched/instanced rendering for boids
+
+## Steering pipeline (per frame)
+
+1. Clear + rebuild spatial grid
+2. For each boid: query neighbors -> compute S/A/C -> combine with weights + noise
+3. Clamp steering vector by `steeringForce`
+4. Integrate: `vel += steering; vel *= (1 - drag); clampSpeed(vel, min, max)`
+5. Update position: `pos += vel * dt`
+6. Apply boundary (bounce or wrap)
+
+## Code style
+
+- TypeScript with strict mode
+- Interfaces for `Boid`, `Vec2`, `Settings`
+- Pure functions for steering math (no side effects, take inputs return outputs)
+- Renderer never modifies simulation state
