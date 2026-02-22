@@ -1,83 +1,104 @@
-import { Application, ParticleContainer, Particle, Texture } from 'pixi.js';
+import * as THREE from 'three';
 import type { Boid } from '../simulation/boid.ts';
 import type { Settings } from '../settings.ts';
-import { TRIANGLE_ANCHOR_X, TRIANGLE_ANCHOR_Y } from './pixi-app.ts';
 
-function hslToHex(h: number, s: number, l: number): number {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  if (h < 60) { r = c; g = x; }
-  else if (h < 120) { r = x; g = c; }
-  else if (h < 180) { g = c; b = x; }
-  else if (h < 240) { g = x; b = c; }
-  else if (h < 300) { r = x; b = c; }
-  else { r = c; b = x; }
-  const ri = Math.round((r + m) * 255);
-  const gi = Math.round((g + m) * 255);
-  const bi = Math.round((b + m) * 255);
-  return (ri << 16) | (gi << 8) | bi;
+const _pos = new THREE.Vector3();
+const _quat = new THREE.Quaternion();
+const _scale = new THREE.Vector3(1, 1, 1);
+const _mat = new THREE.Matrix4();
+const _forward = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+const _color = new THREE.Color();
+const _defaultDir = new THREE.Vector3(1, 0, 0);
+
+function hslToColor(h: number, s: number, l: number, target: THREE.Color): THREE.Color {
+  return target.setHSL(h / 360, s, l);
 }
 
 export class BoidsView {
-  private container: ParticleContainer;
-  private particles: Particle[] = [];
-  private texture: Texture;
+  private mesh: THREE.InstancedMesh;
+  private geometry: THREE.ConeGeometry;
+  private material: THREE.MeshPhongMaterial;
+  private maxCount: number;
 
-  constructor(private app: Application, texture: Texture) {
-    this.texture = texture;
-    this.container = new ParticleContainer({
-      dynamicProperties: {
-        position: true,
-        rotation: true,
-        tint: true,
-      },
+  constructor(private scene: THREE.Scene, initialCount: number) {
+    this.maxCount = Math.max(initialCount, 100);
+    this.geometry = new THREE.ConeGeometry(2, 8, 4);
+    this.geometry.rotateZ(-Math.PI / 2);
+    this.material = new THREE.MeshPhongMaterial({
+      color: 0x88ccff,
+      flatShading: true,
     });
-    app.stage.addChild(this.container);
+
+    this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.maxCount);
+    this.mesh.count = initialCount;
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(
+      new Float32Array(this.maxCount * 3),
+      3,
+    );
+    this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    scene.add(this.mesh);
   }
 
-  syncCount(boids: Boid[]): void {
-    while (this.particles.length < boids.length) {
-      const p = new Particle(this.texture);
-      p.anchorX = TRIANGLE_ANCHOR_X;
-      p.anchorY = TRIANGLE_ANCHOR_Y;
-      this.particles.push(p);
-      this.container.addParticle(p);
+  syncCount(count: number): void {
+    if (count > this.maxCount) {
+      this.scene.remove(this.mesh);
+      this.mesh.dispose();
+      this.maxCount = Math.ceil(count * 1.5);
+      this.mesh = new THREE.InstancedMesh(this.geometry, this.material, this.maxCount);
+      this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.mesh.instanceColor = new THREE.InstancedBufferAttribute(
+        new Float32Array(this.maxCount * 3),
+        3,
+      );
+      this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      this.scene.add(this.mesh);
     }
-    while (this.particles.length > boids.length) {
-      const p = this.particles.pop()!;
-      this.container.removeParticle(p);
-    }
+    this.mesh.count = count;
   }
 
   update(boids: Boid[], settings: Settings): void {
-    this.container.visible = !settings.hideBoids;
+    this.mesh.visible = !settings.hideBoids;
     if (settings.hideBoids) return;
 
-    const speedRange = settings.maxSpeed - settings.minSpeed;
+    const speedRange = settings.maxSpeed - settings.minSpeed + 0.001;
     const useHue = settings.hueBySpeed;
 
     for (let i = 0; i < boids.length; i++) {
       const b = boids[i];
-      const p = this.particles[i];
-      p.x = b.x;
-      p.y = b.y;
-      p.rotation = Math.atan2(b.vy, b.vx);
+      _pos.set(b.x, b.y, b.z);
+
+      const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy + b.vz * b.vz);
+      if (speed > 0.001) {
+        _forward.set(b.vx / speed, b.vy / speed, b.vz / speed);
+      } else {
+        _forward.copy(_defaultDir);
+      }
+      _quat.setFromUnitVectors(_defaultDir, _forward);
+
+      const s = settings.boidSize;
+      _scale.set(s, s, s);
+      _mat.compose(_pos, _quat, _scale);
+      this.mesh.setMatrixAt(i, _mat);
 
       if (useHue) {
-        const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-        const t = Math.min(Math.max((speed - settings.minSpeed) / (speedRange + 0.001), 0), 1);
-        p.tint = hslToHex(240 - t * 240, 0.9, 0.55);
+        const t = Math.min(Math.max((speed - settings.minSpeed) / speedRange, 0), 1);
+        hslToColor(240 - t * 240, 0.9, 0.55, _color);
       } else {
-        p.tint = 0x88ccff;
+        _color.setHex(0x88ccff);
       }
+      this.mesh.setColorAt(i, _color);
     }
+
+    this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
   }
 
   destroy(): void {
-    this.app.stage.removeChild(this.container);
-    this.container.destroy();
-    this.particles = [];
+    this.scene.remove(this.mesh);
+    this.mesh.dispose();
+    this.geometry.dispose();
+    this.material.dispose();
   }
 }

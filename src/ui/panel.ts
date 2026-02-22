@@ -6,36 +6,101 @@ export interface PanelCallbacks {
   onRestart: () => void;
   onExport: () => void;
   onImport: () => void;
+  onResetCamera: () => void;
+  onModeSwitch: () => void;
 }
 
-function computePanelWidth(): number {
-  const vw = window.innerWidth;
-  if (vw >= 1920) return 340;
-  if (vw >= 1440) return 310;
-  if (vw >= 1024) return 280;
-  return Math.max(220, Math.round(vw * 0.28));
+let styleEl: HTMLStyleElement | null = null;
+
+function injectScalingCSS(rowH: number, fontSize: number, pad: number): void {
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `
+    .lil-gui {
+      --widget-height: ${rowH}px;
+      --padding: ${pad}px;
+      --font-size: ${fontSize}px;
+      --input-font-size: ${fontSize}px;
+      --name-width: 45%;
+      font-size: ${fontSize}px !important;
+    }
+    .lil-gui .title {
+      height: ${rowH + pad * 2}px;
+      line-height: ${rowH + pad * 2}px;
+      font-size: ${Math.round(fontSize * 1.05)}px;
+      padding: 0 ${pad}px;
+    }
+    .lil-gui .controller {
+      min-height: ${rowH}px;
+      padding: ${pad}px ${pad}px;
+      font-size: ${fontSize}px;
+    }
+    .lil-gui .controller .name {
+      font-size: ${fontSize}px;
+      line-height: ${rowH}px;
+    }
+    .lil-gui .controller .widget {
+      min-height: ${rowH}px;
+      font-size: ${fontSize}px;
+    }
+    .lil-gui .controller input {
+      font-size: ${fontSize}px;
+      height: ${rowH}px;
+    }
+    .lil-gui .controller .slider {
+      height: ${rowH}px;
+    }
+    .lil-gui .controller.boolean .widget {
+      min-height: ${rowH}px;
+    }
+    .lil-gui .controller.boolean input[type="checkbox"] {
+      width: ${rowH}px;
+      height: ${rowH}px;
+    }
+    .lil-gui .controller.function .widget {
+      min-height: ${rowH}px;
+    }
+    .lil-gui .controller.function button {
+      height: ${rowH}px;
+      font-size: ${fontSize}px;
+    }
+  `;
 }
 
 function applyPanelSizing(gui: GUI): void {
-  const w = computePanelWidth();
-  gui.domElement.style.width = `${w}px`;
-
+  const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const fontSize = vh >= 900 ? '13px' : vh >= 700 ? '12px' : '11px';
-  gui.domElement.style.fontSize = fontSize;
+
+  const w = Math.max(340, Math.round(vw * 0.25));
+  gui.domElement.style.width = `${w}px`;
+  gui.domElement.style.height = `${vh}px`;
   gui.domElement.style.maxHeight = `${vh}px`;
   gui.domElement.style.overflowY = 'auto';
+
+  const totalRows = 38;
+  const rowH = Math.max(18, Math.floor(vh / totalRows));
+  const pad = Math.max(2, Math.floor(rowH * 0.12));
+  const fontSize = Math.max(11, Math.min(18, Math.floor(vh / 52)));
+
+  injectScalingCSS(rowH, fontSize, pad);
 }
 
 export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI {
-  const initialWidth = computePanelWidth();
-  const gui = new GUI({ title: 'Flocking Simulation', width: initialWidth });
+  const gui = new GUI({ title: 'Flocking Simulation', width: Math.max(340, Math.round(window.innerWidth * 0.25)) });
   gui.domElement.style.position = 'fixed';
   gui.domElement.style.top = '0';
   gui.domElement.style.right = '0';
 
   applyPanelSizing(gui);
   window.addEventListener('resize', () => applyPanelSizing(gui));
+
+  const modeFolder = gui.addFolder('Mode');
+  modeFolder.add(settings, 'mode3D').name('3D Simulation').onChange(() => {
+    worldDepthCtrl.domElement.parentElement!.style.display = settings.mode3D ? '' : 'none';
+    callbacks.onModeSwitch();
+  });
 
   const sim = gui.addFolder('Simulation');
   sim.add(settings, 'boidCount', 100, 10000, 1).name('Boid Count').onFinishChange(callbacks.onRestart);
@@ -51,6 +116,8 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   sim.add(settings, 'randomness', 0, 1, 0.01).name('Randomness');
   sim.add(settings, 'bounceEdges').name('Bounce Edges');
   sim.add(settings, 'particleMode').name('Particle Mode');
+  const worldDepthCtrl = sim.add(settings, 'worldDepth', 200, 2000, 10).name('World Depth').onFinishChange(callbacks.onRestart);
+  sim.add(settings, 'boidSize', 0.2, 5, 0.1).name('Boid Size');
 
   const vis = gui.addFolder('Visual');
   vis.add(settings, 'hideBoids').name('Hide Boids');
@@ -59,7 +126,10 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
   vis.add(settings, 'showVisionAreas').name('Vision Areas');
   vis.add(settings, 'showVisionOutlines').name('Vision Outlines');
   vis.add(settings, 'showDebugInfo').name('Debug Info (FPS)');
-  vis.add(settings, 'showSpatialSubdivision').name('Spatial Grid');
+  vis.add(settings, 'showSpatialSubdivision').name('Bounding Box');
+
+  const cam = gui.addFolder('Camera');
+  cam.add({ reset: callbacks.onResetCamera }, 'reset').name('Reset Camera');
 
   const actions = gui.addFolder('Actions');
   actions.add({ restart: callbacks.onRestart }, 'restart').name('Restart Simulation');
@@ -67,7 +137,8 @@ export function createPanel(settings: Settings, callbacks: PanelCallbacks): GUI 
     reset: () => {
       resetSettings(settings);
       gui.controllersRecursive().forEach(c => c.updateDisplay());
-      callbacks.onRestart();
+      worldDepthCtrl.domElement.parentElement!.style.display = settings.mode3D ? '' : 'none';
+      callbacks.onModeSwitch();
     },
   }, 'reset').name('Reset Settings');
   actions.add({ export: callbacks.onExport }, 'export').name('Export Settings');

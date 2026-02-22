@@ -1,4 +1,7 @@
 export interface Settings {
+  // Mode
+  mode3D: boolean;
+
   // Simulation
   boidCount: number;
   visionRadius: number;
@@ -13,6 +16,9 @@ export interface Settings {
   randomness: number;
   bounceEdges: boolean;
   particleMode: boolean;
+  worldDepth: number;
+
+  boidSize: number;
 
   // Visual
   hideBoids: boolean;
@@ -26,6 +32,7 @@ export interface Settings {
 
 export function createDefaultSettings(): Settings {
   return {
+    mode3D: true,
     boidCount: 1000,
     visionRadius: 50,
     movementAccuracy: 16,
@@ -39,6 +46,8 @@ export function createDefaultSettings(): Settings {
     randomness: 0.1,
     bounceEdges: true,
     particleMode: false,
+    worldDepth: 800,
+    boidSize: 1.0,
 
     hideBoids: false,
     showDesiredDirections: false,
