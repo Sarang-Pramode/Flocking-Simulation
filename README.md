@@ -64,19 +64,7 @@ Four logically separated modules:
 
 ## Research context
 
-This demo implements classic Reynolds-style boids as a foundation. The long-term goal is to implement and extend the Flock2 model from:
-
-> "Orientation-based social flocking" -- Journal of Theoretical Biology, 2024
-> ([doi:10.1016/j.jtbi.2024.111844](https://doi.org/10.1016/j.jtbi.2024.111844))
-
-Flock2 decouples social rules (producing heading targets) from an aerodynamic flight model (lift/drag/thrust/gravity) that produces physically plausible motion with energy accounting.
-
-### Roadmap
-
-- **v1** (current): 2D Reynolds boids with interactive demo
-- **v2**: 3D rendering + camera controls
-- **v3**: Flock2 aerodynamic model integration
-- **v4**: Comparative analysis and research publication
+This demo build on classic Reynolds-style boids as a foundation.
 
 ## License
 

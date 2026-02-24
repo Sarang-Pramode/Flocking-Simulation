@@ -7,7 +7,6 @@ const _quat = new THREE.Quaternion();
 const _scale = new THREE.Vector3(1, 1, 1);
 const _mat = new THREE.Matrix4();
 const _forward = new THREE.Vector3();
-const _up = new THREE.Vector3(0, 1, 0);
 const _color = new THREE.Color();
 const _defaultDir = new THREE.Vector3(1, 0, 0);
 

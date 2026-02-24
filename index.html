@@ -119,9 +119,33 @@
       text-decoration: none;
     }
     #info-content a:hover { text-decoration: underline; }
+
+    /* --- Author Credit (bottom-right) --- */
+    #author-credit {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      z-index: 1000;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      color: rgba(192, 205, 224, 0.6);
+      pointer-events: none;
+      user-select: none;
+    }
+    #author-credit a {
+      pointer-events: auto;
+      color: rgba(122, 174, 239, 0.7);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    #author-credit a:hover {
+      color: #a0c8ff;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
+  <div id="author-credit">Built by <a href="https://pramode.dev/" target="_blank" rel="noopener">Pramode</a></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
