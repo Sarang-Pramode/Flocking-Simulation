@@ -84,7 +84,6 @@ function applyPanelSizing(gui: GUI): void {
 
   const w = Math.max(340, Math.round(vw * 0.25));
   gui.domElement.style.width = `${w}px`;
-  gui.domElement.style.height = `${vh}px`;
   gui.domElement.style.maxHeight = `${vh}px`;
   gui.domElement.style.overflowY = 'auto';
 
